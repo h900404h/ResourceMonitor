@@ -3,24 +3,18 @@ function Get-DiskStatus {
 
     $output = @()
 
-    # 所有磁碟（FileSystem provider）
-    $disks = Get-PSDrive -PSProvider FileSystem
+    # DriveType 3 = Local Disk
+    $drives = Get-CimInstance Win32_LogicalDisk | Where-Object { $_.DriveType -eq 3 }
 
-    foreach ($d in $disks) {
+    foreach ($d in $drives) {
 
-        $freeGB  = [math]::Round($d.Free / 1GB, 2)
-        $usedGB  = [math]::Round(($d.Used) / 1GB, 2)
-        $totalGB = [math]::Round($d.Maximum / 1GB, 2)
-
-        # 避免除以 0（某些裝置可能回傳 Size = 0）
-        if ($totalGB -eq 0) {
-            $output += "Drive $($d.DeviceID): Skipped (Total size = 0)"
-            continue
-        }
+        $totalGB = [math]::Round($d.Size / 1GB, 2)
+        $freeGB  = [math]::Round($d.FreeSpace / 1GB, 2)
+        $usedGB  = [math]::Round(($d.Size - $d.FreeSpace) / 1GB, 2)
 
         $percent = [math]::Round(($usedGB / $totalGB) * 100, 2)
 
-        $output += "$($d.Name):  $usedGB GB / $totalGB GB ($percent % used)"
+        $output += "Drive $($d.DeviceID): $usedGB GB / $totalGB GB ($percent % used)"
     }
 
     return $output
